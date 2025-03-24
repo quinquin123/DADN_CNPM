@@ -8,7 +8,7 @@ import YoloHomeSignUp from './pages/YoloHomeSignUp.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <YoloHomeSignUp />
+      <App />
     </BrowserRouter>
   </StrictMode>,
 )
