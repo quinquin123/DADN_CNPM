@@ -1,155 +1,174 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const YoloHomeSignUp = () => {
   const [formData, setFormData] = useState({
-    firstname: '',
-    surname: '',
-    phone: '',
-    email: '',
-    password: '',
-    repeatPassword: ''
+    firstName: "",  // Đổi thành firstName
+    lastName: "",   // Đổi thành lastName
+    phone: "",
+    email: "",
+    password: "",
+    repeatPassword: "",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log('Form submitted:', formData);
+    setError("");
+
+    // Kiểm tra các trường bắt buộc
+    const { firstName, lastName, phone, email, password, repeatPassword } = formData;
+    if (!firstName || !lastName || !phone || !email || !password) {
+      setError("Vui lòng điền đầy đủ các trường bắt buộc!");
+      return;
+    }
+    if (password !== repeatPassword) {
+      setError("Mật khẩu không khớp!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/v1/user/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.firstName,  // Sửa thành firstName
+          lastName: formData.lastName,    // Sửa thành lastName
+          phone: formData.phone,
+          email: formData.email,
+          password: formData.password,
+          // avatar và sensorId là tùy chọn, có thể thêm nếu cần
+        }),
+      });
+
+      const data = await response.json();
+      setLoading(false);
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setError("Email hoặc số điện thoại đã tồn tại!");
+        } else {
+          setError(data.message || "Đăng ký thất bại!");
+        }
+      } else {
+        // Lưu accessToken nếu cần
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("isAuthenticated", "true"); // Đồng bộ với App
+        alert("Đăng ký thành công!");
+        navigate("/login");
+      }
+    } catch (err) {
+      setLoading(false);
+      setError("Có lỗi xảy ra. Vui lòng thử lại!");
+      console.error("Fetch error:", err);
+    }
   };
 
   return (
-    <div className="flex flex-row font-poppins h-screen w-full">
-      {/* Left Panel - Image with text overlay */}
-      
-      <div className="w-2/5 relative bg-neutral-900">
-      <div className="absolute bottom-0 left-0 w-full h-full flex items-end">
-          {/* This would be replaced with an actual image in production */}
-          <div className="  absolute inset-0 bg-cover bg-center" style={{ 
-            backgroundImage: "url('signin.png')", 
-          }}></div>
+    <div className="flex h-screen w-full font-poppins">
+      <div className="w-2/5 relative bg-neutral-900 text-white">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('signin.png')" }}
+        />
+        <div className="relative z-10 flex flex-col pt-36 px-16">
+          <h1 className="text-4xl font-bold">Join YoloHome</h1>
+          <p className="text-xl mt-2">Your journey to smarter living starts here.</p>
         </div>
-        <div className="absolute inset-0 flex flex-col pt-36 px-16 text-white">
-          <h1 className="text-4xl font-bold ">Join YoloHome</h1>
-          <p className="text-xl">Your journey to smarter living starts here.</p>
-        </div>
-       
       </div>
-      
-      {/* Right Panel - Sign Up Form */}
+
       <div className="w-3/5 flex flex-col justify-center items-center px-16 bg-white">
         <div className="mb-12">
-          <h1 className="text-3xl font-bold tracking-wider">YOLOHOME</h1>
+          <h1 className="text-3xl font-bold tracking-wider text-gray-900">YOLOHOME</h1>
         </div>
-        
+
         <div className="w-full max-w-md mx-auto">
-          <h2 className="text-3xl font-semibold mb-8">Sign Up</h2>
-          
+          <h2 className="text-3xl font-semibold mb-8 text-gray-900">Sign Up</h2>
+          {error && <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex space-x-4">
-              <div className="w-1/2">
-                <input
-                  type="text"
-                  name="firstname"
-                  className="w-full px-4 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Firstname"
-                  value={formData.firstname}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="w-1/2">
-                <input
-                  type="text"
-                  name="surname"
-                  className="w-full px-4 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Surname"
-                  value={formData.surname}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-              </div>
               <input
-                type="tel"
-                name="phone"
-                className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Phone Number"
-                value={formData.phone}
+                type="text"
+                name="firstName"  // Sửa tên input thành firstName
+                placeholder="First Name"
+                value={formData.firstName}
                 onChange={handleChange}
+                className="w-1/2 px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+                disabled={loading}
+              />
+              <input
+                type="text"
+                name="lastName"  // Sửa tên input thành lastName
+                placeholder="Last Name"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="w-1/2 px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+                disabled={loading}
               />
             </div>
-            
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                </svg>
-              </div>
-              <input
-                type="email"
-                name="email"
-                className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Your email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="password"
-                name="password"
-                className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="password"
-                name="repeatPassword"
-                className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Repeat Password"
-                value={formData.repeatPassword}
-                onChange={handleChange}
-              />
-            </div>
-            
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Phone Number"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+              disabled={loading}
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Your email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+              disabled={loading}
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+              disabled={loading}
+            />
+            <input
+              type="password"
+              name="repeatPassword"
+              placeholder="Repeat Password"
+              value={formData.repeatPassword}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-md border-gray-300 focus:ring-1 focus:ring-blue-500 text-gray-900"
+              disabled={loading}
+            />
             <button
               type="submit"
-              className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition duration-200 mt-4"
+              className={`w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition duration-200 mt-4 ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={loading}
             >
-              Sign Up
+              {loading ? "Signing Up..." : "Sign Up"}
             </button>
-            
             <div className="text-center mt-4">
               <p className="text-gray-500">
-                Already have an account? <a href="#" className="text-blue-500">Log In</a>
+                Already have an account?{" "}
+                <span
+                  onClick={() => navigate("/login")}
+                  className="text-blue-500 cursor-pointer hover:underline"
+                >
+                  Log In
+                </span>
               </p>
             </div>
           </form>

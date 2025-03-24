@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
-const HomePage = () => {
-// Merged state
+const HomePage = ({ onLogout }) => {
 const [lightOn, setLightOn] = useState(true);
 const [lightMode, setLightMode] = useState('Warm');
 const [lightLevel, setLightLevel] = useState(50);
@@ -48,6 +48,10 @@ const [currentMode, setCurrentMode] = useState('default');
     //   body: JSON.stringify({ mode })
     // });
   };
+  const handleLogout = () => {
+    onLogout(); // Gọi hàm đăng xuất từ App.jsx
+  };
+
 
   return (
     <div className="w-full font-poppins flex flex-col text-black h-screen bg-gray-200">
@@ -60,7 +64,7 @@ const [currentMode, setCurrentMode] = useState('default');
           <button className="bg-blue-400 text-white font-medium py-1 px-6 rounded-full">Yes</button>
           <button className="bg-blue-400 text-white font-medium py-1 px-6 rounded-full">No</button>
         </div>
-        <button className=" ml-auto mr-4 border border-black rounded-full px-4 py-1 font-medium">Log out</button>
+        <button className=" ml-auto mr-4 border border-black rounded-full px-4 py-1 font-medium" onClick={handleLogout}>Log out</button>
 
       </div>
       
