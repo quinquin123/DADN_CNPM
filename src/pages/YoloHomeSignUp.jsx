@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 const YoloHomeSignUp = () => {
   const [formData, setFormData] = useState({
-    firstName: "",  // Đổi thành firstName
-    lastName: "",   // Đổi thành lastName
+    firstName: "",  // Using firstName
+    lastName: "",   // Using lastName
     phone: "",
     email: "",
     password: "",
@@ -23,14 +23,14 @@ const YoloHomeSignUp = () => {
     e.preventDefault();
     setError("");
 
-    // Kiểm tra các trường bắt buộc
+    // Check required fields
     const { firstName, lastName, phone, email, password, repeatPassword } = formData;
     if (!firstName || !lastName || !phone || !email || !password) {
-      setError("Vui lòng điền đầy đủ các trường bắt buộc!");
+      setError("Please fill in all required fields!");
       return;
     }
     if (password !== repeatPassword) {
-      setError("Mật khẩu không khớp!");
+      setError("Passwords do not match!");
       return;
     }
 
@@ -41,12 +41,12 @@ const YoloHomeSignUp = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: formData.firstName,  // Sửa thành firstName
-          lastName: formData.lastName,    // Sửa thành lastName
+          firstName: formData.firstName,
+          lastName: formData.lastName,
           phone: formData.phone,
           email: formData.email,
           password: formData.password,
-          // avatar và sensorId là tùy chọn, có thể thêm nếu cần
+          // Optionally add avatar and sensorId if needed
         }),
       });
 
@@ -55,26 +55,27 @@ const YoloHomeSignUp = () => {
 
       if (!response.ok) {
         if (response.status === 409) {
-          setError("Email hoặc số điện thoại đã tồn tại!");
+          setError("Email or phone number already exists!");
         } else {
-          setError(data.message || "Đăng ký thất bại!");
+          setError(data.message || "Sign up failed!");
         }
       } else {
-        // Lưu accessToken nếu cần
+        // Save accessToken if needed
         localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("isAuthenticated", "true"); // Đồng bộ với App
-        alert("Đăng ký thành công!");
+        localStorage.setItem("isAuthenticated", "true"); // Sync with App
+        alert("Sign up successful!");
         navigate("/login");
       }
     } catch (err) {
       setLoading(false);
-      setError("Có lỗi xảy ra. Vui lòng thử lại!");
+      setError("An error occurred. Please try again!");
       console.error("Fetch error:", err);
     }
   };
 
   return (
     <div className="flex h-screen w-full font-poppins">
+      {/* Left Panel - Image with text overlay */}
       <div className="w-2/5 relative bg-neutral-900 text-white">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -86,19 +87,19 @@ const YoloHomeSignUp = () => {
         </div>
       </div>
 
-      <div className="w-3/5 flex flex-col justify-center items-center px-16 bg-white">
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold tracking-wider text-gray-900">YOLOHOME</h1>
-        </div>
-
-        <div className="w-full max-w-md mx-auto">
-          <h2 className="text-3xl font-semibold mb-8 text-gray-900">Sign Up</h2>
+      {/* Right Panel - Sign Up Form */}
+      <div className="w-3/5 flex flex-col justify-center items-center   bg-gray-100">
+        <div className="w-full max-w-lg bg-white rounded-xl p-10 drop-shadow-sm ">
+        <div className="text-4xl relative font-semibold text-center pb-16 text-gray-900  ">
+          YOLOHOME
+          </div>
+          <h2 className="text-2xl font-semibold mb-8 text-gray-900">Sign Up</h2>
           {error && <p className="text-red-500 mb-4 bg-red-100 p-2 rounded">{error}</p>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex space-x-4">
               <input
                 type="text"
-                name="firstName"  // Sửa tên input thành firstName
+                name="firstName"
                 placeholder="First Name"
                 value={formData.firstName}
                 onChange={handleChange}
@@ -107,7 +108,7 @@ const YoloHomeSignUp = () => {
               />
               <input
                 type="text"
-                name="lastName"  // Sửa tên input thành lastName
+                name="lastName"
                 placeholder="Last Name"
                 value={formData.lastName}
                 onChange={handleChange}

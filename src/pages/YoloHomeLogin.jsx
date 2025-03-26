@@ -14,7 +14,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
     setError("");
 
     if (!email || !password) {
-      setError("Vui lòng nhập cả email và mật khẩu!");
+      setError("Please enter both email and password!");
       setLoading(false);
       return;
     }
@@ -30,11 +30,11 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Email hoặc mật khẩu không đúng!");
+        throw new Error(errorData.message || "Incorrect email or password!");
       }
 
       const data = await response.json();
-      // Lưu token và trạng thái đăng nhập
+      // Save token and authentication status
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("isAuthenticated", "true");
       onLoginSuccess();
@@ -48,20 +48,21 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
   return (
     <div className="flex h-screen w-full font-poppins bg-gray-100">
       {/* Left Panel - Login Form */}
-      <div className="w-3/5 flex flex-col items-center justify-center">
-        <div className="text-4xl font-semibold text-gray-900 mb-10">
+      <div className="w-3/5 flex flex-col pt-48 items-center   ">
+        
+
+        <div className="w-full p-14 max-w-md bg-white rounded-xl drop-shadow-sm">
+        <div className="text-4xl relative font-semibold text-center pb-20 text-gray-900  ">
           YOLOHOME
         </div>
-
-        <div className="w-full max-w-md px-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Đăng nhập</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Log In</h2>
           <p className="text-gray-500 mb-6">
-            Chưa có tài khoản?{" "}
+            Don't have an account?{" "}
             <span
               className="text-blue-500 cursor-pointer hover:underline"
               onClick={() => navigate("/signup")}
             >
-              Đăng ký
+              Sign Up
             </span>
           </p>
 
@@ -87,7 +88,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
               <input
                 type="email"
                 className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                placeholder="Email của bạn"
+                placeholder="Your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
@@ -112,7 +113,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
               <input
                 type="password"
                 className="w-full pl-10 pr-3 py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                placeholder="Mật khẩu"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -148,10 +149,10 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
                   </svg>
-                  Đang đăng nhập...
+                  Logging in...
                 </span>
               ) : (
-                "Đăng nhập"
+                "Log In"
               )}
             </button>
 
@@ -161,7 +162,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
                 className="text-blue-500 text-sm hover:underline"
                 onClick={(e) => e.preventDefault()}
               >
-                Quên mật khẩu?
+                Forgot password?
               </a>
             </div>
           </form>
@@ -171,13 +172,13 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
       {/* Right Panel - Image */}
       <div className="w-2/5 relative bg-gray-200">
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute opacity-90 inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/login.png')" }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-20"></div>
           <div className="absolute inset-0 flex flex-col justify-center px-10 text-white">
-            <h2 className="text-3xl font-semibold">Chào mừng đến với YoloHome</h2>
-            <p className="text-xl mt-2">Cuộc sống thông minh bắt đầu từ nhà.</p>
+            <h2 className="text-4xl font-semibold">Welcome to YoloHome</h2>
+            <p className="text-xl mt-2">Smart living starts at home.</p>
           </div>
         </div>
       </div>
