@@ -1,11 +1,11 @@
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes, useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import SettingsPage from "./pages/SettingsPage";
 import Sidebar from "./components/Sidebar";
 import HomePage from "./pages/HomePage";
 import YoloHomeLogin from "./pages/YoloHomeLogin";
 import YoloHomeSignUp from "./pages/YoloHomeSignUp";
-import { Navigate } from "react-router-dom";
+import Assistant from "./components/asisstant";
 
 // Component PrivateRoute
 const PrivateRoute = ({ element }) => {
@@ -19,7 +19,7 @@ function App() {
     localStorage.getItem("isAuthenticated") === "true"
   );
 
-  // Hàm xử lý đăng nhập thành công
+  // Xử lý đăng nhập thành công
   const handleLoginSuccess = () => {
     localStorage.setItem("isAuthenticated", "true");
     setIsAuthenticated(true);
@@ -32,18 +32,15 @@ function App() {
         method: "POST",
         credentials: "include",
       });
-
-      // Xóa trạng thái xác thực trong localStorage
       localStorage.removeItem("authToken"); 
       localStorage.setItem("isAuthenticated", "false");
-
-      // Cập nhật trạng thái trong component
       setIsAuthenticated(false);
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Logout failed:", error);
     }
   };
+
   // Điều hướng khi chưa đăng nhập
   useEffect(() => {
     if (
@@ -58,24 +55,31 @@ function App() {
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
       {isAuthenticated && <Sidebar />}
-      <div className="flex-1">
-        <Routes>
-          <Route
-            path="/login"
-            element={<YoloHomeLogin onLoginSuccess={handleLoginSuccess} />}
-          />
-          <Route path="/signup" element={<YoloHomeSignUp />} />
-          <Route
-            path="/"
-            element={<PrivateRoute element={<HomePage onLogout={handleLogout} />} />}
-          />
-          <Route
-            path="/settings"
-            element={<PrivateRoute element={<SettingsPage />} />}
-          />
-        </Routes>
+      <div className="flex-1 flex flex-col">
+        {/* Hiển thị Assistant cho các private route */}
+        {isAuthenticated && <Assistant onLogout={handleLogout} />}
+        <div className="flex-1">
+          <Routes>
+            <Route
+              path="/login"
+              element={<YoloHomeLogin onLoginSuccess={handleLoginSuccess} />}
+            />
+            <Route path="/signup" element={<YoloHomeSignUp />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute element={<HomePage onLogout={handleLogout} />} />
+              }
+            />
+            <Route
+              path="/settings"
+              element={<PrivateRoute element={<SettingsPage />} />}
+            />
+          </Routes>
+        </div>
       </div>
     </div>
   );
 }
+
 export default App;
