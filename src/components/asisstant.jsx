@@ -58,7 +58,7 @@ const Asisstant = ({ onLogout }) => {
         </button>
       </div>
       <button
-        className="ml-auto mr-4 border border-black rounded-full px-4 py-1 font-medium text-black"
+        className="ml-auto mr-4 border-2 border-black rounded-full px-4 py-1 font-medium text-black"
         onClick={onLogout}
       >
         Log out

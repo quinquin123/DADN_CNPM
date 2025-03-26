@@ -7,6 +7,9 @@ import YoloHomeLogin from "./pages/YoloHomeLogin";
 import YoloHomeSignUp from "./pages/YoloHomeSignUp";
 import Assistant from "./components/asisstant";
 
+// 1) Import Notification:
+import Notification from "./pages/Notification";
+
 // Component PrivateRoute
 const PrivateRoute = ({ element }) => {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
@@ -54,10 +57,13 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
+      {/* Nếu đã đăng nhập thì hiển thị Sidebar */}
       {isAuthenticated && <Sidebar />}
+      
       <div className="flex-1 flex flex-col">
-        {/* Hiển thị Assistant cho các private route */}
+        {/* Nếu đã đăng nhập thì hiển thị Assistant */}
         {isAuthenticated && <Assistant onLogout={handleLogout} />}
+        
         <div className="flex-1">
           <Routes>
             <Route
@@ -65,15 +71,23 @@ function App() {
               element={<YoloHomeLogin onLoginSuccess={handleLoginSuccess} />}
             />
             <Route path="/signup" element={<YoloHomeSignUp />} />
+            
+            {/* Trang Home (private) */}
             <Route
               path="/"
-              element={
-                <PrivateRoute element={<HomePage onLogout={handleLogout} />} />
-              }
+              element={<PrivateRoute element={<HomePage onLogout={handleLogout} />} />}
             />
+            
+            {/* Trang Settings (private) */}
             <Route
               path="/settings"
               element={<PrivateRoute element={<SettingsPage />} />}
+            />
+
+            {/* 2) Thêm route Notification (private) */}
+            <Route
+              path="/notification"
+              element={<PrivateRoute element={<Notification />} />}
             />
           </Routes>
         </div>
