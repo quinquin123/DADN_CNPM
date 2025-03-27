@@ -27,7 +27,7 @@ const ConfirmForm = ({ onConfirm, onCancel, message = "Bạn có chắc chắn m
 
   return (
     <div className="w-4/5 font-poppins flex flex-col gap-4 text-black m-auto justify-between">
-      <div className="bg-white rounded-lg  p-6 text-center">
+      <div className="bg-white rounded-lg p-6 text-center">
         <p className="text-xl font-medium">{message}</p>
       </div>
       <div className="flex m-auto space-x-16">
