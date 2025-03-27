@@ -39,7 +39,6 @@ const HomePage = ({ onLogout }) => {
   return (
     <div className="w-full font-poppins flex flex-col text-black h-screen bg-gray-200">
       
-      
       {/* Main content */}
       <div className="flex-1 p-4 flex gap-4">
         {/* Left panel */}
@@ -92,36 +91,38 @@ const HomePage = ({ onLogout }) => {
                 {lightOn ? 'On' : 'Off'}
               </button>
             </div>
-            
-            <div className="flex justify-between mb-6">
-              {['Cold', 'Cool', 'Warm', 'Hot'].map((mode) => (
-                <div key={mode} className="flex flex-col items-center">
-                  <div 
-                    className={`w-6 h-6 rounded-sm border-2 border-gray-300 cursor-pointer ${lightMode === mode ? 'bg-black' : ''}`}
-                    onClick={() => setLightMode(mode)}
-                  />
-                  <span className="mt-1">{mode}</span>
-                </div>
-              ))}
-            </div>
-            
-            <div>
-              <div className="text-lg mb-2">Level</div>
-              <div className="h-2 bg-gray-300 rounded-full relative">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={lightLevel}
-                  onChange={(e) => setLightLevel(parseInt(e.target.value))}
-                  className="absolute w-full h-full opacity-0 cursor-pointer"
-                />
-                <div 
-                  className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-black rounded-full"
-                  style={{ left: `${lightLevel}%` }}
-                />
+            {/* Container cho giao diện điều chỉnh */}
+            <div className={`${!lightOn ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="flex justify-between mb-6">
+                {['Cold', 'Cool', 'Warm', 'Hot'].map((mode) => (
+                  <div key={mode} className="flex flex-col items-center">
+                    <div 
+                      className={`w-6 h-6 rounded-sm border-2 border-gray-300 cursor-pointer ${lightMode === mode ? 'bg-black' : ''}`}
+                      onClick={() => setLightMode(mode)}
+                    />
+                    <span className="mt-1">{mode}</span>
+                  </div>
+                ))}
               </div>
-              <div className="text-right mt-1">{lightLevel}%</div>
+              
+              <div>
+                <div className="text-lg mb-2">Level</div>
+                <div className="h-2 bg-gray-300 rounded-full relative">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={lightLevel}
+                    onChange={(e) => setLightLevel(parseInt(e.target.value))}
+                    className="absolute w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div 
+                    className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-black rounded-full"
+                    style={{ left: `${lightLevel}%` }}
+                  />
+                </div>
+                <div className="text-right mt-1">{lightLevel}%</div>
+              </div>
             </div>
           </div>
           
@@ -136,35 +137,37 @@ const HomePage = ({ onLogout }) => {
                 {airConditionOn ? 'On' : 'Off'}
               </button>
             </div>
-            
-            <div className="flex justify-between mb-6">
-              {['Cold', 'Cool', 'Warm', 'Hot'].map((mode) => (
-                <div key={mode} className="flex flex-col items-center">
-                  <div 
-                    className={`w-6 h-6 rounded-sm border-2 border-gray-300 cursor-pointer ${acMode === mode ? 'bg-black' : ''}`}
-                    onClick={() => setAcMode(mode)}
-                  />
-                  <span className="mt-1">{mode}</span>
+            {/* Container cho giao diện điều chỉnh */}
+            <div className={`${!airConditionOn ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="flex justify-between mb-6">
+                {['Cold', 'Cool', 'Warm', 'Hot'].map((mode) => (
+                  <div key={mode} className="flex flex-col items-center">
+                    <div 
+                      className={`w-6 h-6 rounded-sm border-2 border-gray-300 cursor-pointer ${acMode === mode ? 'bg-black' : ''}`}
+                      onClick={() => setAcMode(mode)}
+                    />
+                    <span className="mt-1">{mode}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div>
+                <div className="text-lg mb-2">Temperature</div>
+                <div className="flex items-center justify-center">
+                  <button 
+                    className="w-8 h-8 rounded-full bg-white border border-gray-400 flex items-center justify-center"
+                    onClick={() => setTemperature(Math.max(16, temperature - 1))}
+                  >
+                    <span className="text-xl">−</span>
+                  </button>
+                  <span className="mx-4 text-2xl font-medium">{temperature}°C</span>
+                  <button 
+                    className="w-8 h-8 rounded-full bg-white border border-gray-400 flex items-center justify-center"
+                    onClick={() => setTemperature(Math.min(30, temperature + 1))}
+                  >
+                    <span className="text-xl">+</span>
+                  </button>
                 </div>
-              ))}
-            </div>
-            
-            <div>
-              <div className="text-lg mb-2">Temperature</div>
-              <div className="flex items-center justify-center">
-                <button 
-                  className="w-8 h-8 rounded-full bg-white border border-gray-400 flex items-center justify-center"
-                  onClick={() => setTemperature(Math.max(16, temperature - 1))}
-                >
-                  <span className="text-xl">−</span>
-                </button>
-                <span className="mx-4 text-2xl font-medium">{temperature}°C</span>
-                <button 
-                  className="w-8 h-8 rounded-full bg-white border border-gray-400 flex items-center justify-center"
-                  onClick={() => setTemperature(Math.min(30, temperature + 1))}
-                >
-                  <span className="text-xl">+</span>
-                </button>
               </div>
             </div>
           </div>
