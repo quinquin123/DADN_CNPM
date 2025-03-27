@@ -87,9 +87,8 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 overflow-y-auto">
+    <div className="min-h-screen w-full  bg-gray-900  from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 overflow-y-auto">
       <div className="flex-1 overflow-auto relative z-10">
-        <Header title="SmartHome" />
 
         <div className="max-w-4xl mx-auto p-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">

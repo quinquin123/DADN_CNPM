@@ -7,9 +7,10 @@ const SIDEBAR_ITEMS = [
     { name: "Home", icon: House, color:"#6366f1", href: "/" },
     { name: "Statistics", icon: ChartNoAxesCombined, color:"#8B5CF6", href: "/statistics" },
     { name: "Notification", icon: BellRing, color:"#EC4899", href: "/notification" },
-    { name: "Edit", icon: Pencil, color:'#F59E0B', href: "/edit"},
+    { name: "Edit", icon: Pencil, color:'#F59E0B', href: "/mode-manager"},  // Đã sửa
     { name: "Settings", icon: UserRoundPen, color:'#6EE787', href: "/settings" },
 ];
+
 const Sidebar = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 

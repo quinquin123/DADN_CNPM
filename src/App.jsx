@@ -1,3 +1,4 @@
+// App.jsx
 import { Route, Routes, useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import SettingsPage from "./pages/SettingsPage";
@@ -6,9 +7,8 @@ import HomePage from "./pages/HomePage";
 import YoloHomeLogin from "./pages/YoloHomeLogin";
 import YoloHomeSignUp from "./pages/YoloHomeSignUp";
 import Assistant from "./components/asisstant";
-
-// 1) Import Notification:
 import Notification from "./pages/Notification";
+import Modemanager from "./pages/ModeManager"; 
 
 // Component PrivateRoute
 const PrivateRoute = ({ element }) => {
@@ -84,10 +84,16 @@ function App() {
               element={<PrivateRoute element={<SettingsPage />} />}
             />
 
-            {/* 2) Thêm route Notification (private) */}
+            {/* Route Notification (private) */}
             <Route
               path="/notification"
               element={<PrivateRoute element={<Notification />} />}
+            />
+
+            {/* Route Mode Manager (private) */}
+            <Route
+              path="/mode-manager"
+              element={<PrivateRoute element={<Modemanager />} />}
             />
           </Routes>
         </div>
