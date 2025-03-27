@@ -145,7 +145,7 @@ const ModeManager = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-opacity-50">
           <div className="bg-white py-8 rounded-xl  w-1/3">
             <ConfirmForm 
-              message="Bạn có chắc chắn muốn xoá mode này?" 
+              message="Delete this mode?" 
               onConfirm={confirmDelete}
               onCancel={handleCancelDelete}
             />
