@@ -127,7 +127,6 @@ function App() {
               element={<PrivateRoute element={<SensorManagement />} sensorId={sensorId} />}
             />
 
-            {/* Thêm route mới cho SensorDashboard */}
             <Route
               path="/statistics"
               element={<PrivateRoute element={<SensorDashboard />} sensorId={sensorId} />}
