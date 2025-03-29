@@ -24,4 +24,4 @@ Bước 3: Cài đặt các dependency
     + npm install
 
 Bước 4: Chạy dự án
-    + npm run dev
+- npm run dev
