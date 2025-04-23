@@ -1,79 +1,118 @@
-// src/components/asisstant.jsx
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const Asisstant = ({ onLogout, userName = 'Mike' }) => {
-  // State để lưu thông báo hiện tại
-  const [message, setMessage] = useState(
-    `Hi ${userName}, temperature is high so you wanna turn on the air condition?`
-  );
-  // State để kiểm tra đã đưa ra quyết định hay chưa
-  const [decisionMade, setDecisionMade] = useState(false);
+const Assistant = ({ accessToken, onLogout, userName = 'User' }) => {
+  const [message, setMessage] = useState(`Hi ${userName}, Have a nice day!`);
+  const [decisionMade, setDecisionMade] = useState(true);
+  const [currentNotificationId, setCurrentNotificationId] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [timeoutId, setTimeoutId] = useState(null);
 
-  // Hàm gọi API khi bấm Yes
-  const handleYesClick = async () => {
-    try {
-      const response = await fetch('/api/v1/some-endpoint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision: 'yes' }),
-      });
-      
-      // Nếu cần xử lý dữ liệu trả về
-      const data = await response.json();
-      console.log('Yes response:', data);
-      // Sau khi xử lý, cập nhật nội dung thông báo
+  useEffect(() => {
+    if (!accessToken) {
+      console.log('No accessToken provided, skipping WebSocket');
+      return;
+    }
+
+    const wsConnection = new WebSocket(`wss://smarthomeserver-1wdh.onrender.com/ws/notification?token=${accessToken}`);
+
+    wsConnection.onopen = () => {
+      console.log('WebSocket connected');
+    };
+
+    wsConnection.onmessage = (event) => {
+      console.log('WebSocket message:', event.data);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(event.data);
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+        return;
+      }
+
+      if (parsedData.error) {
+        console.error('WebSocket error:', parsedData.error);
+        return;
+      }
+
+      handleNotification(parsedData);
+    };
+
+    wsConnection.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    wsConnection.onclose = () => {
+      console.log('WebSocket đã đóng kết nối');
+      setTimeout(() => {
+        console.log('Reconnecting WebSocket...');
+        const newSocket = new WebSocket(`wss://smarthomeserver-1wdh.onrender.com/ws/notification?token=${accessToken}`);
+        newSocket.onopen = wsConnection.onopen;
+        newSocket.onmessage = wsConnection.onmessage;
+        newSocket.onerror = wsConnection.onerror;
+        newSocket.onclose = wsConnection.onclose;
+        setSocket(newSocket);
+      }, 5000);
+    };
+
+    setSocket(wsConnection);
+
+    return () => {
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.close();
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [accessToken]);
+
+  const handleNotification = (data) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    let newMessage = '';
+    let requiresResponse = false;
+
+    if (data.request) {
+      newMessage = `Hi ${userName}, ${data.request}`;
+      requiresResponse = true;
+    } else if (data.details && data.details.length > 0) {
+      const detail = data.details[0];
+      const notificationType = detail.type || 'Notification';
+      const notificationMode = detail.mode || '';
+
+      if (notificationType.toLowerCase().includes('temperature') && notificationMode.toLowerCase().includes('high')) {
+        newMessage = `Hi ${userName}, temperature is high so you wanna turn on the air condition?`;
+        requiresResponse = true;
+      } else {
+        newMessage = `Hi ${userName}, ${notificationType} ${notificationMode}`.trim();
+        requiresResponse = false;
+      }
+    }
+
+    setMessage(newMessage);
+    setCurrentNotificationId(data.id || data.sensorID || Date.now().toString());
+    setDecisionMade(!requiresResponse);
+
+    const newTimeoutId = setTimeout(() => {
       setMessage(`Hi ${userName}, Have a nice day!`);
       setDecisionMade(true);
-    } catch (error) {
-      console.error('Error sending Yes:', error);
-    }
-  };
+      setCurrentNotificationId(null);
+    }, 10000);
 
-  // Hàm gọi API khi bấm No
-  const handleNoClick = async () => {
-    try {
-      const response = await fetch('/api/v1/some-endpoint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision: 'no' }),
-      });
-      // Nếu cần xử lý dữ liệu trả về
-      const data = await response.json();
-      console.log('No response:', data);
-      // Sau khi xử lý, cập nhật nội dung thông báo
-      setMessage(`Hi ${userName}, Have a nice day!`);
-      setDecisionMade(true);
-    } catch (error) {
-      console.error('Error sending No:', error);
-    }
+    setTimeoutId(newTimeoutId);
   };
 
   return (
-    <div className="flex items-center p-4 bg-white text-black text-base">
-      <div className="flex items-center">
-        <span className="text-gray-800 font-medium text-xl">
+    <div className="flex items-center p-4 bg-gray-800 text-gray-100 font-poppins shadow-md">
+      <div className="flex-1">
+        <span className="text-lg font-medium text-gray-200">
           {message}
         </span>
       </div>
-      {/* Chỉ hiển thị 2 nút nếu chưa đưa ra quyết định */}
-      {!decisionMade && (
-        <div className="flex ml-5 space-x-2">
-          <button
-            className="bg-blue-400 text-white font-medium py-1 px-6 rounded-full"
-            onClick={handleYesClick}
-          >
-            Yes
-          </button>
-          <button
-            className="bg-blue-400 text-white font-medium py-1 px-6 rounded-full"
-            onClick={handleNoClick}
-          >
-            No
-          </button>
-        </div>
-      )}
       <button
-        className="ml-auto mr-4 border-2 border-black rounded-full px-4 py-1 font-medium text-black"
+        className="ml-4 bg-transparent border-2 border-gray-400 text-gray-200 font-medium py-2 px-4 rounded-lg hover:bg-gray-700 hover:border-gray-300 transition-colors duration-200"
         onClick={onLogout}
       >
         Log out
@@ -82,4 +121,4 @@ const Asisstant = ({ onLogout, userName = 'Mike' }) => {
   );
 };
 
-export default Asisstant;
+export default Assistant;

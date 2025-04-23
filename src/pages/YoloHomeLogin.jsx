@@ -37,7 +37,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
       // Save token and authentication status
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("isAuthenticated", "true");
-      onLoginSuccess();
+      onLoginSuccess(data.accessToken);
     } catch (error) {
       setError(error.message);
     } finally {

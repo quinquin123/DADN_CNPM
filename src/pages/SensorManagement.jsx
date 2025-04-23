@@ -131,6 +131,7 @@ const SensorManagement = () => {
           // Nếu DELETE thành công (không phải owner)
           setSubscribers(subscribers.filter((subscriber) => subscriber.userId !== userId));
           showNotification("Access removed successfully", "success");
+          window.location.reload();
         } else {
           // Nếu DELETE thất bại (có thể là owner), thử API PUT
           const unsubscribeResponse = await fetch("/api/v1/sensor/user/unsubscribe", {
@@ -259,19 +260,23 @@ const SensorManagement = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-700 text-left">
-                        <th className="p-3 rounded-tl-lg w-1/3">ID</th>
-                        <th className="p-3 w-1/3">SensorID</th>
+                        <th className="p-3 rounded-tl-lg w-1/5">Name</th>
+                        <th className="p-3 w-1/4">ID</th>
+                        <th className="p-3 w-1/4">SensorID</th>
+                        <th className="p-3 w-1/7">Phone</th>
                         <th className="p-3 rounded-tr-lg w-1/3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
                       {subscribers.map((subscriber) => (
                         <tr key={subscriber.id} className="hover:bg-gray-700">
+                          <td className="p-3 text-gray-300">{subscriber.firstName + " " + subscriber.lastName}</td>
                           <td className="p-3 text-gray-300">{subscriber.id.substring(0, 8)}...</td>
                           <td className="p-3 text-gray-300">{subscriber.sensorId.substring(0, 8)}...</td>
+                          <td className="p-3 text-gray-300">{subscriber.phone}</td>
                           <td className="p-3 text-right">
                             <button
-                              onClick={() => handleRemoveAccess(subscriber.userId)}
+                              onClick={() => handleRemoveAccess(subscriber.id)}
                               className="inline-flex items-center px-3 py-1.5 bg-red-700 hover:bg-red-600 rounded text-white text-sm transition-colors duration-200"
                             >
                               <FiTrash2 className="mr-1" /> Remove access
@@ -301,8 +306,7 @@ const SensorManagement = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-700 text-left">
-                        <th className="p-3 rounded-tl-lg">ID</th>
-                        <th className="p-3">SensorID</th>
+                        <th className="p-3 rounded-tl-lg">SensorID</th>
                         <th className="p-3">UserID</th>
                         <th className="p-3">Request date</th>
                         <th className="p-3 rounded-tr-lg text-right">Action</th>
@@ -311,7 +315,6 @@ const SensorManagement = () => {
                     <tbody className="divide-y divide-gray-700">
                       {requests.map((request) => (
                         <tr key={request.id} className="hover:bg-gray-700">
-                          <td className="p-3 text-gray-300">{request.id.substring(0, 8)}...</td>
                           <td className="p-3 text-gray-300">{request.sensorId.substring(0, 8)}...</td>
                           <td className="p-3">{request.userId}</td>
                           <td className="p-3 text-gray-300">{formatTimestamp(request.createdAt)}</td>
