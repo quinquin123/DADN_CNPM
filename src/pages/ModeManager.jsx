@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useEffect } from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 import SettingForm from '../components/SettingForm';
 import ConfirmForm from '../components/ConfirmForm';

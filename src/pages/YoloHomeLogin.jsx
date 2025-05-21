@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// eslint-disable-next-line react/prop-types
 const YoloHomeLogin = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,7 +58,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
         </div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Log In</h2>
           <p className="text-gray-500 mb-6">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <span
               className="text-blue-500 cursor-pointer hover:underline"
               onClick={() => navigate("/signup")}

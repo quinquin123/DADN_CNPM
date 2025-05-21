@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 
+// eslint-disable-next-line react/prop-types
 const Assistant = ({ accessToken, onLogout, userName = 'User' }) => {
   const [message, setMessage] = useState(`Hi ${userName}, Have a nice day!`);
+  // eslint-disable-next-line no-unused-vars
   const [decisionMade, setDecisionMade] = useState(true);
+  // eslint-disable-next-line no-unused-vars
   const [currentNotificationId, setCurrentNotificationId] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [socket, setSocket] = useState(null);
   const [timeoutId, setTimeoutId] = useState(null);
 
@@ -64,6 +68,7 @@ const Assistant = ({ accessToken, onLogout, userName = 'User' }) => {
         clearTimeout(timeoutId);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   const handleNotification = (data) => {

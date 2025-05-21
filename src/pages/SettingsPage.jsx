@@ -1,8 +1,10 @@
+// eslint-disable-next-line no-unused-vars
 import Header from "../components/Header";
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, Upload, LogOut, Save, Edit } from "lucide-react";
 
 // Nhận onLogout từ props
+// eslint-disable-next-line react/prop-types
 const SettingsPage = ({ onLogout }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -14,6 +16,7 @@ const SettingsPage = ({ onLogout }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [userData, setUserData] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({});

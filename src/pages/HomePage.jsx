@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Mode from '../components/mode';
 
+// eslint-disable-next-line no-unused-vars
 const HomePage = ({ onLogout, sensorId }) => {
   const [deviceState, setDeviceState] = useState({
     lightOn: true,
@@ -27,42 +28,38 @@ const HomePage = ({ onLogout, sensorId }) => {
   });
 
   const accessToken = localStorage.getItem('accessToken') || 'default-token';
+// Trong file HomePage.js
+useEffect(() => {
+  const fetchModes = async () => {
+    try {
+      const response = await fetch(`/api/v1/user/me/mode-configs`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: '*/*',
+        },
+      });
 
-  // Fetch modes from API
-  useEffect(() => {
-    const fetchModes = async () => {
-      try {
-        const response = await fetch(`/api/v1/user/me/mode-configs`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: '*/*',
-          },
-        });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      setAppState((prev) => ({
+        ...prev,
+        modes: data,
+        currentMode: null, // Không đặt mode mặc định
+      }));
+      // Xóa phần gọi switchMode(data[0].id) để không kích hoạt mode mặc định
+    } catch (error) {
+      console.error('Error fetching modes:', error);
+      setAppState((prev) => ({
+        ...prev,
+        errorMessage: 'Could not load modes. Please try again.',
+      }));
+    }
+  };
 
-        const data = await response.json();
-        setAppState((prev) => ({
-          ...prev,
-          modes: data,
-          currentMode: data.length > 0 ? data[0].id : null,
-        }));
-
-        if (data.length > 0) {
-          switchMode(data[0].id);
-        }
-      } catch (error) {
-        console.error('Error fetching modes:', error);
-        setAppState((prev) => ({
-          ...prev,
-          errorMessage: 'Could not load modes. Please try again.',
-        }));
-      }
-    };
-
-    fetchModes();
-  }, [accessToken]);
+  fetchModes();
+}, [accessToken]);
 
   // WebSocket setup
   useEffect(() => {

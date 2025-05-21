@@ -1,5 +1,4 @@
-// src/components/SettingForm.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // eslint-disable-next-line react/prop-types
 const SettingForm = ({ initialData = {}, onConfirm, onCancel, isEditingDefault = false }) => {

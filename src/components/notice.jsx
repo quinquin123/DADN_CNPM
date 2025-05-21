@@ -1,5 +1,4 @@
-// src/components/Notice.jsx
-import React from 'react';
+import PropTypes from 'prop-types';
 
 const Notice = ({ type, message, time, actions }) => {
   const getTypeStyles = (type) => {
@@ -66,6 +65,26 @@ const Notice = ({ type, message, time, actions }) => {
       </div>
     </div>
   );
+};
+
+Notice.propTypes = {
+  type: PropTypes.string,
+  message: PropTypes.string,
+  time: PropTypes.string,
+  actions: PropTypes.arrayOf(
+    PropTypes.shape({
+      label: PropTypes.string.isRequired,
+      onClick: PropTypes.func.isRequired,
+      type: PropTypes.oneOf(['primary', 'secondary']),
+    })
+  ),
+};
+
+Notice.defaultProps = {
+  type: 'info',
+  message: '',
+  time: '',
+  actions: null,
 };
 
 export default Notice;

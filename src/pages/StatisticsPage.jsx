@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -23,6 +23,7 @@ ChartJS.register(
   Filler
 );
 
+// eslint-disable-next-line react/prop-types
 const StatisticsPage = ({ sensorId }) => {
   const [field, setField] = useState("temperature");
   const [min, setMin] = useState("");

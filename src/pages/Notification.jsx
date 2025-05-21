@@ -1,7 +1,8 @@
 // src/pages/Notification.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Notice from '../components/Notice';
 
+// eslint-disable-next-line react/prop-types
 const Notification = ({ accessToken }) => {
   const [notifications, setNotifications] = useState([]);
 
