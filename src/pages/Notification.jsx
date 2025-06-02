@@ -77,7 +77,7 @@ const Notification = ({ accessToken }) => {
       return;
     }
 
-    const socket = new WebSocket(`wss://smarthomeserver-1wdh.onrender.com/ws/notification?token=${accessToken}`);
+    const socket = new WebSocket(`wss://smarthomeserver-wdt0.onrender.com/ws/notification?token=${accessToken}`);
 
     socket.onopen = () => {
       console.log('WebSocket connected');
