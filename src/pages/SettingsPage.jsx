@@ -1,9 +1,8 @@
 // eslint-disable-next-line no-unused-vars
 import Header from "../components/Header";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Upload, LogOut, Save, Edit } from "lucide-react";
 
-// Nhận onLogout từ props
 // eslint-disable-next-line react/prop-types
 const SettingsPage = ({ onLogout }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -20,6 +19,12 @@ const SettingsPage = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({});
+  const [faceIdImage, setFaceIdImage] = useState(null);
+  const [faceIdMessage, setFaceIdMessage] = useState("");
+  const [faceIdLoading, setFaceIdLoading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -210,6 +215,103 @@ const SettingsPage = ({ onLogout }) => {
     } catch (error) {
       console.error("Failed to update user data:", error);
       alert(error.message || "Failed to update information. Please try again.");
+    }
+  };
+
+  const startCamera = async () => {
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      setPasswordError("Failed to access camera: " + err.message);
+      setShowCamera(false);
+    }
+  };
+
+  const captureImage = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "face-id-capture.jpg", { type: "image/jpeg" });
+      setFaceIdImage(file);
+      setShowCamera(false);
+      video.srcObject.getTracks().forEach(track => track.stop());
+    }, "image/jpeg");
+  };
+
+  const handleFaceIdEnroll = async () => {
+    setFaceIdLoading(true);
+    setFaceIdMessage("");
+    setPasswordError("");
+
+    if (!faceIdImage) {
+      setPasswordError("Please select or capture an image for Face ID!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setPasswordError("Please log in first to enroll Face ID!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", faceIdImage);
+
+    try {
+      const response = await fetch("/api/v1/user/me/face-id", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 400) {
+          throw new Error(errorData.message || "Invalid image for Face ID!");
+        } else if (response.status === 401) {
+          throw new Error("Unauthorized: Please log in again!");
+        } else if (response.status === 404) {
+          throw new Error("User not found!");
+        } else {
+          throw new Error(errorData.message || "Failed to enroll Face ID!");
+        }
+      }
+
+      const data = await response.json();
+      setFaceIdMessage(data.message || "Face ID enrolled successfully!");
+    } catch (error) {
+      console.error("Failed to enroll Face ID:", error);
+      setPasswordError(error.message);
+    } finally {
+      setFaceIdLoading(false);
+    }
+  };
+
+  const handleFaceIdImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.match("image.*")) {
+        setPasswordError("Please select an image file");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setPasswordError("File size should not exceed 5MB");
+        return;
+      }
+      setFaceIdImage(file);
     }
   };
 
@@ -453,6 +555,99 @@ const SettingsPage = ({ onLogout }) => {
                   {passwordError}
                 </div>
               )}
+              {faceIdMessage && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-lg text-sm">
+                  {faceIdMessage}
+                </div>
+              )}
+              <div className="pt-4">
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Enroll Face ID
+                </h3>
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    id="face-id-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFaceIdImageChange}
+                  />
+                  <button
+                    className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
+                    onClick={() => document.getElementById("face-id-upload").click()}
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Choose File
+                  </button>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center">Or</p>
+                  {!showCamera ? (
+                    <button
+                      className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
+                      onClick={startCamera}
+                      disabled={faceIdLoading}
+                    >
+                      <Upload size={16} className="mr-2" />
+                      Capture from Camera
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        className="w-full max-w-md rounded-md border border-gray-300 dark:border-gray-600"
+                      />
+                      <button
+                        className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
+                        onClick={captureImage}
+                        disabled={faceIdLoading}
+                      >
+                        Take Photo
+                      </button>
+                    </div>
+                  )}
+                  {faceIdImage && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1 truncate max-w-xs">
+                      {faceIdImage.name}
+                    </p>
+                  )}
+                  <button
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleFaceIdEnroll}
+                    disabled={faceIdLoading || !faceIdImage}
+                  >
+                    {faceIdLoading ? (
+                      <span className="flex items-center">
+                        <svg
+                          className="animate-spin h-5 w-5 mr-2 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        Enrolling...
+                      </span>
+                    ) : (
+                      <>
+                        <Save size={16} className="mr-2" />
+                        Enroll Face ID
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
               <div className="pt-4 flex flex-col sm:flex-row justify-between gap-3">
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
@@ -463,7 +658,7 @@ const SettingsPage = ({ onLogout }) => {
                 </button>
                 <button
                   className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
-                  onClick={onLogout} // Gắn hàm onLogout vào nút Log out
+                  onClick={onLogout}
                 >
                   <LogOut size={18} className="mr-2" />
                   Log out
@@ -471,6 +666,7 @@ const SettingsPage = ({ onLogout }) => {
               </div>
             </div>
           </div>
+          <canvas ref={canvasRef} className="hidden" />
         </div>
       </div>
     </div>

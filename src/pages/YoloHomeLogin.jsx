@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // eslint-disable-next-line react/prop-types
@@ -7,8 +7,14 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [faceIdImage, setFaceIdImage] = useState(null);
+  const [faceIdLoading, setFaceIdLoading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const navigate = useNavigate();
 
+  // Xử lý đăng nhập bằng email và mật khẩu
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -35,7 +41,6 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
       }
 
       const data = await response.json();
-      // Save token and authentication status
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("isAuthenticated", "true");
       onLoginSuccess(data.accessToken);
@@ -46,16 +51,94 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
     }
   };
 
+  // Bật camera
+  const startCamera = async () => {
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      setError("Failed to access camera: " + err.message);
+      setShowCamera(false);
+    }
+  };
+
+  // Chụp ảnh từ camera
+  const captureImage = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "face-id-capture.jpg", { type: "image/jpeg" });
+      setFaceIdImage(file);
+      setShowCamera(false);
+      video.srcObject.getTracks().forEach(track => track.stop());
+    }, "image/jpeg");
+  };
+
+  // Xử lý đăng nhập bằng Face ID
+  const handleFaceIdLogin = async (e) => {
+    e.preventDefault();
+    setFaceIdLoading(true);
+    setError("");
+
+    if (!faceIdImage) {
+      setError("Please select or capture an image for Face ID login!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", faceIdImage);
+
+    try {
+      const response = await fetch("/api/v1/user/auth/login-face-id", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 400) {
+          throw new Error(errorData.message || "Invalid image for Face ID!");
+        } else if (response.status === 401) {
+          throw new Error("Face ID is incorrect!");
+        } else {
+          throw new Error(errorData.message || "Failed to login with Face ID!");
+        }
+      }
+
+      const data = await response.json();
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("isAuthenticated", "true");
+      onLoginSuccess(data.accessToken);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setFaceIdLoading(false);
+    }
+  };
+
+  // Xử lý khi chọn file ảnh
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setFaceIdImage(file);
+  };
+
   return (
     <div className="flex h-screen w-full font-poppins bg-gray-100">
       {/* Left Panel - Login Form */}
-      <div className="w-3/5 flex flex-col pt-48 items-center   ">
-        
-
+      <div className="w-3/5 flex flex-col pt-48 items-center">
         <div className="w-full p-14 max-w-md bg-white rounded-xl drop-shadow-sm">
-        <div className="text-4xl relative font-semibold text-center pb-20 text-gray-900  ">
-          YOLOHOME
-        </div>
+          <div className="text-4xl relative font-semibold text-center pb-20 text-gray-900">
+            YOLOHOME
+          </div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Log In</h2>
           <p className="text-gray-500 mb-6">
             Don&apos;t have an account?{" "}
@@ -73,6 +156,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
             </p>
           )}
 
+          {/* Form đăng nhập bằng email/mật khẩu */}
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -167,6 +251,87 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
               </a>
             </div>
           </form>
+
+          {/* Form đăng nhập bằng Face ID */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Log In with Face ID
+            </h3>
+            <div className="space-y-5">
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                onChange={handleImageChange}
+                disabled={faceIdLoading}
+              />
+              <p className="text-gray-500 text-sm text-center">Or</p>
+              {!showCamera ? (
+                <button
+                  type="button"
+                  className="w-full py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition duration-200"
+                  onClick={startCamera}
+                  disabled={faceIdLoading}
+                >
+                  Capture from Camera
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    className="w-full rounded-md border border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    className="w-full py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition duration-200"
+                    onClick={captureImage}
+                    disabled={faceIdLoading}
+                  >
+                    Take Photo
+                  </button>
+                </div>
+              )}
+              <form onSubmit={handleFaceIdLogin}>
+                <button
+                  type="submit"
+                  className={`w-full py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-md transition duration-200 ${
+                    faceIdLoading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={faceIdLoading}
+                >
+                  {faceIdLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg
+                        className="animate-spin h-5 w-5 mr-2 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                      Logging in...
+                    </span>
+                  ) : (
+                    "Log In with Face ID"
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+          <canvas ref={canvasRef} className="hidden" />
         </div>
       </div>
 

@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://smarthomeserver-1wdh.onrender.com",
+        target: "https://smarthomeserver-wdt0.onrender.com",
         changeOrigin: true,
         secure: false,
       },
