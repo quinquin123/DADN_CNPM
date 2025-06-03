@@ -14,6 +14,8 @@ const HomePage = ({ onLogout, sensorId }) => {
     lightIntensity: 0,
   });
 
+  const [lastLedModeCode, setLastLedModeCode] = useState(3); // 3 tương ứng với 'Warm'
+
   const [appState, setAppState] = useState({
     currentMode: 'null',
     modes: [],
@@ -28,44 +30,48 @@ const HomePage = ({ onLogout, sensorId }) => {
   });
 
   const accessToken = localStorage.getItem('accessToken') || 'default-token';
-// Trong file HomePage.js
-useEffect(() => {
-  const fetchModes = async () => {
-    try {
-      const response = await fetch(`/api/v1/user/me/mode-configs`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: '*/*',
-        },
-      });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+  // Map từ chuỗi LightMode sang mã số LED và ngược lại
+  const ledModeMap = { Cold: 1, Cool: 2, Warm: 3, Hot: 4 };
+  const codeToModeMap = { 1: 'Cold', 2: 'Cool', 3: 'Warm', 4: 'Hot' };
 
-      const data = await response.json();
-      setAppState((prev) => ({
-        ...prev,
-        modes: data,
-        currentMode: null, // Không đặt mode mặc định
-      }));
-      // Xóa phần gọi switchMode(data[0].id) để không kích hoạt mode mặc định
-    } catch (error) {
-      console.error('Error fetching modes:', error);
-      setAppState((prev) => ({
-        ...prev,
-        errorMessage: 'Could not load modes. Please try again.',
-      }));
-    }
-  };
+  // Trong file HomePage.js
+  useEffect(() => {
+    const fetchModes = async () => {
+      try {
+        const response = await fetch(`/api/v1/user/me/mode-configs`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: '*/*',
+          },
+        });
 
-  fetchModes();
-}, [accessToken]);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const data = await response.json();
+        setAppState((prev) => ({
+          ...prev,
+          modes: data,
+          currentMode: null, // Không đặt mode mặc định
+        }));
+      } catch (error) {
+        console.error('Error fetching modes:', error);
+        setAppState((prev) => ({
+          ...prev,
+          errorMessage: 'Could not load modes. Please try again.',
+        }));
+      }
+    };
+
+    fetchModes();
+  }, [accessToken]);
 
   // WebSocket setup
   useEffect(() => {
     if (!sensorId) return;
 
-    const ws = new WebSocket(`wss://smarthomeserver-1wdh.onrender.com/ws/realtime?token=${accessToken}`);
+    const ws = new WebSocket(`wss://smarthomeserver-wdt0.onrender.com/ws/realtime?token=${accessToken}`);
 
     ws.onopen = () => console.log('WebSocket connected');
 
@@ -110,20 +116,39 @@ useEffect(() => {
     }
   };
 
+  // Toggle light: nếu tắt thì lưu lại lastLedModeCode, nếu bật thì khôi phục lại
   const toggleLight = () => {
     const newState = !deviceState.lightOn;
-    setDeviceState((prev) => ({ ...prev, lightOn: newState }));
-    sendControlCommand({ led_mode: newState ? 1 : 0 });
+    if (!newState) {
+      // Đang tắt: lưu mã mode hiện tại rồi gửi led_mode = 0
+      const currentCode = ledModeMap[deviceState.lightMode] || lastLedModeCode;
+      setLastLedModeCode(currentCode);
+      setDeviceState((prev) => ({ ...prev, lightOn: newState }));
+      connectionState.socket && connectionState.socket.send(JSON.stringify({ led_mode: 0 }));
+    } else {
+      // Đang bật: khôi phục lại mã mode cũ
+      const restoreCode = lastLedModeCode;
+      const restoreMode = codeToModeMap[restoreCode] || 'Warm';
+      setDeviceState((prev) => ({ ...prev, lightOn: newState, lightMode: restoreMode }));
+      connectionState.socket && connectionState.socket.send(JSON.stringify({ led_mode: restoreCode }));
+    }
   };
 
+  // Sửa handleLightChange: gửi dữ liệu trực tiếp qua socket
   const handleLightChange = (mode, level) => {
     const updates = {};
     if (mode !== undefined) {
       updates.lightMode = mode;
+      const ledCode = ledModeMap[mode]; // Chuyển chuỗi sang số
+      connectionState.socket && connectionState.socket.send(JSON.stringify({ led_mode: ledCode }));
+      // Cập nhật lastLedModeCode nếu đang bật
+      if (deviceState.lightOn) {
+        setLastLedModeCode(ledCode);
+      }
     }
     if (level !== undefined) {
       updates.lightLevel = level;
-      sendControlCommand({ led_brightness: level });
+      connectionState.socket && connectionState.socket.send(JSON.stringify({ led_brightness: level }));
     }
     setDeviceState((prev) => ({ ...prev, ...updates }));
   };
@@ -152,11 +177,12 @@ useEffect(() => {
 
       const selectedMode = appState.modes.find((mode) => mode.id === modeId);
       if (selectedMode) {
-        const ledModeMap = { 1: 'Cold', 2: 'Cool', 3: 'Warm', 4: 'Hot' };
+        const ledCode = selectedMode.ledMode; // Giả sử selectedMode.ledMode chứa giá trị số 1–4
+        const modeString = codeToModeMap[ledCode] || 'Warm';
 
         setDeviceState({
-          lightOn: selectedMode.ledMode > 0,
-          lightMode: ledModeMap[selectedMode.ledMode] || 'Warm',
+          lightOn: ledCode > 0,
+          lightMode: modeString,
           lightLevel: selectedMode.brightness,
           fanMode: selectedMode.fanMode,
           temperature: deviceState.temperature,
@@ -164,13 +190,20 @@ useEffect(() => {
           lightIntensity: deviceState.lightIntensity,
         });
 
+        // Cập nhật lastLedModeCode nếu đang bật
+        if (ledCode > 0) {
+          setLastLedModeCode(ledCode);
+        }
+
         setAppState((prev) => ({ ...prev, currentMode: modeId }));
 
-        sendControlCommand({
-          led_mode: selectedMode.ledMode,
-          led_brightness: selectedMode.brightness,
-          fan_mode: selectedMode.fanMode,
-        });
+        connectionState.socket && connectionState.socket.send(
+          JSON.stringify({
+            led_mode: ledCode,
+            led_brightness: selectedMode.brightness,
+            fan_mode: selectedMode.fanMode,
+          })
+        );
       }
     } catch (error) {
       console.error('Mode activation failed:', error);
