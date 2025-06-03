@@ -1,7 +1,5 @@
-// eslint-disable-next-line no-unused-vars
-import Header from "../components/Header";
 import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Upload, LogOut, Save, Edit } from "lucide-react";
+import { Eye, EyeOff, Upload, LogOut, Save, Edit, Trash } from "lucide-react";
 
 // eslint-disable-next-line react/prop-types
 const SettingsPage = ({ onLogout }) => {
@@ -220,6 +218,8 @@ const SettingsPage = ({ onLogout }) => {
 
   const startCamera = async () => {
     setShowCamera(true);
+    setFaceIdMessage("");
+    setPasswordError("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
@@ -244,9 +244,25 @@ const SettingsPage = ({ onLogout }) => {
       setFaceIdImage(file);
       setShowCamera(false);
       video.srcObject.getTracks().forEach(track => track.stop());
+      setFaceIdMessage("Image captured! Ready to enroll or update Face ID.");
     }, "image/jpeg");
-  };
 
+  };
+  const handleFaceIdImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.match("image.*")) {
+        setPasswordError("Please select an image file");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setPasswordError("File size should not exceed 5MB");
+        return;
+      }
+      setFaceIdImage(file);
+      setFaceIdMessage("Image selected! Ready to enroll or update Face ID.");
+    }
+  };
   const handleFaceIdEnroll = async () => {
     setFaceIdLoading(true);
     setFaceIdMessage("");
@@ -292,6 +308,19 @@ const SettingsPage = ({ onLogout }) => {
 
       const data = await response.json();
       setFaceIdMessage(data.message || "Face ID enrolled successfully!");
+      // Refresh user data to reflect updated enrolledFaceId status
+      const userResponse = await fetch("/api/v1/user/me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (userResponse.ok) {
+        const updatedUserData = await userResponse.json();
+        setUserData(updatedUserData);
+        setEditedData(updatedUserData);
+      }
     } catch (error) {
       console.error("Failed to enroll Face ID:", error);
       setPasswordError(error.message);
@@ -300,18 +329,123 @@ const SettingsPage = ({ onLogout }) => {
     }
   };
 
-  const handleFaceIdImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.match("image.*")) {
-        setPasswordError("Please select an image file");
-        return;
+  const handleFaceIdUpdate = async () => {
+    setFaceIdLoading(true);
+    setFaceIdMessage("");
+    setPasswordError("");
+
+    if (!faceIdImage) {
+      setPasswordError("Please select or capture a new image to update Face ID!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setPasswordError("Please log in first to update Face ID!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", faceIdImage);
+
+    try {
+      const response = await fetch("/api/v1/user/me/face-id", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 400) {
+          throw new Error(errorData.message || "Invalid image for Face ID update!");
+        } else if (response.status === 401) {
+          throw new Error("Unauthorized: Please log in again!");
+        } else if (response.status === 404) {
+          throw new Error("User not found!");
+        } else {
+          throw new Error(errorData.message || "Failed to update Face ID!");
+        }
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setPasswordError("File size should not exceed 5MB");
-        return;
+
+      const data = await response.json();
+      setFaceIdMessage(data.message || "Face ID updated successfully!");
+      const userResponse = await fetch("/api/v1/user/me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (userResponse.ok) {
+        const updatedUserData = await userResponse.json();
+        setUserData(updatedUserData);
+        setEditedData(updatedUserData);
       }
-      setFaceIdImage(file);
+    } catch (error) {
+      console.error("Failed to update Face ID:", error);
+      setPasswordError(error.message);
+    } finally {
+      setFaceIdLoading(false);
+    }
+  };
+
+  const handleFaceIdDelete = async () => {
+    setFaceIdLoading(true);
+    setFaceIdMessage("");
+    setPasswordError("");
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setPasswordError("Please log in first to delete Face ID!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/v1/user/me/face-id", {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401) {
+          throw new Error("Unauthorized: Please log in again!");
+        } else if (response.status === 404) {
+          throw new Error("User not found!");
+        } else {
+          throw new Error(errorData.message || "Failed to delete Face ID!");
+        }
+      }
+
+      const data = await response.json();
+      setFaceIdMessage(data.message || "Face ID deleted successfully!");
+      setFaceIdImage(null);
+      // Refresh user data to reflect updated enrolledFaceId status
+      const userResponse = await fetch("/api/v1/user/me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      if (userResponse.ok) {
+        const updatedUserData = await userResponse.json();
+        setUserData(updatedUserData);
+        setEditedData(updatedUserData);
+      }
+    } catch (error) {
+      console.error("Failed to delete Face ID:", error);
+      setPasswordError(error.message);
+    } finally {
+      setFaceIdLoading(false);
     }
   };
 
@@ -380,13 +514,6 @@ const SettingsPage = ({ onLogout }) => {
                     accept="image/*"
                     onChange={handleFileChange}
                   />
-                  <button
-                    className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
-                    onClick={() => document.getElementById("avatar-upload").click()}
-                  >
-                    <Upload size={16} className="mr-2" />
-                    Choose File
-                  </button>
                   <button
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleAvatarChange}
@@ -562,90 +689,161 @@ const SettingsPage = ({ onLogout }) => {
               )}
               <div className="pt-4">
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Enroll Face ID
+                  Face ID Settings
                 </h3>
                 <div className="space-y-4">
-                  <input
-                    type="file"
-                    id="face-id-upload"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFaceIdImageChange}
-                  />
-                  <button
-                    className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
-                    onClick={() => document.getElementById("face-id-upload").click()}
-                  >
-                    <Upload size={16} className="mr-2" />
-                    Choose File
-                  </button>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center">Or</p>
-                  {!showCamera ? (
-                    <button
-                      className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
-                      onClick={startCamera}
-                      disabled={faceIdLoading}
-                    >
-                      <Upload size={16} className="mr-2" />
-                      Capture from Camera
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        className="w-full max-w-md rounded-md border border-gray-300 dark:border-gray-600"
-                      />
+                  <div className="flex flex-col space-y-3">
+                    <input
+                      type="file"
+                      id="face-id-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFaceIdImageChange}
+                    />
+                    {!showCamera ? (
                       <button
                         className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
-                        onClick={captureImage}
+                        onClick={startCamera}
                         disabled={faceIdLoading}
                       >
-                        Take Photo
+                        <Upload size={16} className="mr-2" />
+                        Capture from Camera
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          className="w-full max-w-md rounded-md border border-gray-300 dark:border-gray-600"
+                        />
+                        <button
+                          className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors"
+                          onClick={captureImage}
+                          disabled={faceIdLoading}
+                        >
+                          Take Photo
+                        </button>
+                      </div>
+                    )}
+                    {faceIdImage && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1 truncate max-w-xs">
+                        {faceIdImage.name}
+                      </p>
+                    )}
+                  </div>
+                  {userData?.enrolledFaceId ? (
+                    <div className="flex gap-3">
+                      <button
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleFaceIdDelete}
+                        disabled={faceIdLoading}
+                      >
+                        {faceIdLoading ? (
+                          <span className="flex items-center">
+                            <svg
+                              className="animate-spin h-5 w-5 mr-2 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                            Deleting...
+                          </span>
+                        ) : (
+                          <>
+                            <Trash size={16} className="mr-2" />
+                            Delete Face ID
+                          </>
+                        )}
+                      </button>
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleFaceIdUpdate}
+                        disabled={faceIdLoading || !faceIdImage}
+                      >
+                        {faceIdLoading ? (
+                          <span className="flex items-center">
+                            <svg
+                              className="animate-spin h-5 w-5 mr-2 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                            Updating...
+                          </span>
+                        ) : (
+                          <>
+                            <Edit size={16} className="mr-2" />
+                            Update Face ID
+                          </>
+                        )}
                       </button>
                     </div>
+                  ) : (
+                    <button
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleFaceIdEnroll}
+                      disabled={faceIdLoading || !faceIdImage}
+                    >
+                      {faceIdLoading ? (
+                        <span className="flex items-center">
+                          <svg
+                            className="animate-spin h-5 w-5 mr-2 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          Enrolling...
+                        </span>
+                      ) : (
+                        <>
+                          <Save size={16} className="mr-212" />
+                          Enroll Face ID
+                        </>
+                      )}
+                    </button>
                   )}
-                  {faceIdImage && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1 truncate max-w-xs">
-                      {faceIdImage.name}
-                    </p>
-                  )}
-                  <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleFaceIdEnroll}
-                    disabled={faceIdLoading || !faceIdImage}
-                  >
-                    {faceIdLoading ? (
-                      <span className="flex items-center">
-                        <svg
-                          className="animate-spin h-5 w-5 mr-2 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                        Enrolling...
-                      </span>
-                    ) : (
-                      <>
-                        <Save size={16} className="mr-2" />
-                        Enroll Face ID
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
               <div className="pt-4 flex flex-col sm:flex-row justify-between gap-3">

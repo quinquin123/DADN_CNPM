@@ -7,7 +7,6 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [faceIdImage, setFaceIdImage] = useState(null);
   const [faceIdLoading, setFaceIdLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
@@ -65,39 +64,35 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
     }
   };
 
-  // Chụp ảnh từ camera
-  const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+  // Chụp ảnh và xác thực FaceID
+  const captureAndVerify = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      setError("Camera or canvas not ready!");
+      setFaceIdLoading(false);
+      return;
+    }
+
+    setFaceIdLoading(true);
+    setError("");
+
+    // Chụp ảnh từ camera
     const canvas = canvasRef.current;
     const video = videoRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob((blob) => {
-      const file = new File([blob], "face-id-capture.jpg", { type: "image/jpeg" });
-      setFaceIdImage(file);
-      setShowCamera(false);
-      video.srcObject.getTracks().forEach(track => track.stop());
-    }, "image/jpeg");
-  };
-
-  // Xử lý đăng nhập bằng Face ID
-  const handleFaceIdLogin = async (e) => {
-    e.preventDefault();
-    setFaceIdLoading(true);
-    setError("");
-
-    if (!faceIdImage) {
-      setError("Please select or capture an image for Face ID login!");
-      setFaceIdLoading(false);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("image", faceIdImage);
-
     try {
+      // Chuyển ảnh thành file
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/jpeg");
+      });
+      const file = new File([blob], "face-id-capture.jpg", { type: "image/jpeg" });
+
+      // Gọi API xác thực Face ID
+      const formData = new FormData();
+      formData.append("image", file);
+
       const response = await fetch("/api/v1/user/auth/login-face-id", {
         method: "POST",
         body: formData,
@@ -118,6 +113,10 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("isAuthenticated", "true");
       onLoginSuccess(data.accessToken);
+
+      // Dừng camera sau khi xác thực thành công
+      video.srcObject.getTracks().forEach(track => track.stop());
+      setShowCamera(false);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -126,10 +125,10 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
   };
 
   // Xử lý khi chọn file ảnh
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setFaceIdImage(file);
-  };
+  // const handleImageChange = (e) => {
+  //   const file = e.target.files[0];
+  //   setFaceIdImage(file);
+  // };
 
   return (
     <div className="flex h-screen w-full font-poppins bg-gray-100">
@@ -258,14 +257,14 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
               Log In with Face ID
             </h3>
             <div className="space-y-5">
-              <input
+              {/* <input
                 type="file"
                 accept="image/*"
                 className="w-full py-3 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 onChange={handleImageChange}
                 disabled={faceIdLoading}
               />
-              <p className="text-gray-500 text-sm text-center">Or</p>
+              <p className="text-gray-500 text-sm text-center">Or</p> */}
               {!showCamera ? (
                 <button
                   type="button"
@@ -273,7 +272,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
                   onClick={startCamera}
                   disabled={faceIdLoading}
                 >
-                  Capture from Camera
+                  Log In with Face ID
                 </button>
               ) : (
                 <div className="space-y-3">
@@ -285,50 +284,39 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
                   <button
                     type="button"
                     className="w-full py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition duration-200"
-                    onClick={captureImage}
+                    onClick={captureAndVerify}
                     disabled={faceIdLoading}
                   >
-                    Take Photo
+                    {faceIdLoading ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin h-5 w-5 mr-2 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        Verifying...
+                      </span>
+                    ) : (
+                      "Verify"
+                    )}
                   </button>
                 </div>
               )}
-              <form onSubmit={handleFaceIdLogin}>
-                <button
-                  type="submit"
-                  className={`w-full py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-md transition duration-200 ${
-                    faceIdLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                  disabled={faceIdLoading}
-                >
-                  {faceIdLoading ? (
-                    <span className="flex items-center justify-center">
-                      <svg
-                        className="animate-spin h-5 w-5 mr-2 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
-                      Logging in...
-                    </span>
-                  ) : (
-                    "Log In with Face ID"
-                  )}
-                </button>
-              </form>
             </div>
           </div>
           <canvas ref={canvasRef} className="hidden" />
