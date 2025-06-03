@@ -133,7 +133,7 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
   return (
     <div className="flex h-screen w-full font-poppins bg-gray-100">
       {/* Left Panel - Login Form */}
-      <div className="w-3/5 flex flex-col pt-48 items-center">
+      <div className="w-3/5 flex flex-col pt-32 items-center">
         <div className="w-full p-14 max-w-md bg-white rounded-xl drop-shadow-sm">
           <div className="text-4xl relative font-semibold text-center pb-20 text-gray-900">
             YOLOHOME
@@ -240,22 +240,25 @@ const YoloHomeLogin = ({ onLoginSuccess }) => {
               )}
             </button>
 
-            <div className="text-center">
-              <a
-                href="#"
-                className="text-blue-500 text-sm hover:underline"
-                onClick={(e) => e.preventDefault()}
-              >
-                Forgot password?
-              </a>
-            </div>
+    
           </form>
 
           {/* Form đăng nhập bằng Face ID */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Log In with Face ID
-            </h3>
+            
+          <div className="flex items-center justify-between mb-2">
+  <h3 className="text-lg font-semibold text-gray-900">
+    Log In with Face ID
+  </h3>
+  <a
+    href="#"
+    className="text-blue-500 text-sm hover:underline"
+    onClick={(e) => e.preventDefault()}
+  >
+    Forgot password?
+  </a>
+</div>
+
             <div className="space-y-5">
               {/* <input
                 type="file"
