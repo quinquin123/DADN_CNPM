@@ -1,10 +1,12 @@
-// src/pages/Notification.jsx
 import { useState, useEffect } from 'react';
 import Notice from '../components/Notice';
 
 // eslint-disable-next-line react/prop-types
 const Notification = ({ accessToken }) => {
   const [notifications, setNotifications] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);       // Số thông báo mỗi trang
+  const [totalItems, setTotalItems] = useState(0); // Lưu tổng số notification từ API
 
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleString('en-GB', {
@@ -16,91 +18,86 @@ const Notification = ({ accessToken }) => {
     });
   };
 
-  // Gọi API để lấy thông báo
-  useEffect(() => {
-    console.log('Starting API fetch with accessToken:', accessToken);
-    if (!accessToken) {
-      console.log('No accessToken provided, skipping API fetch');
-      return;
-    }
+  // Hàm fetch nhận thêm page làm tham số
+  const fetchNotifications = async (page) => {
+    if (!accessToken) return;
 
-    const fetchNotifications = async () => {
-      try {
-        console.log('Fetching notifications from API...');
-        const response = await fetch('/api/v1/user/me/notifications', {
+    try {
+      const response = await fetch(
+        `/api/v1/user/me/notifications?page=${page}&limit=${itemsPerPage}`,
+        {
           method: 'GET',
           headers: {
             'Accept': '*/*',
             'Authorization': `Bearer ${accessToken}`,
           },
-        });
-
-        console.log('API response status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
         }
+      );
 
-        const data = await response.json();
-        console.log('API response data:', data);
-
-        if (!Array.isArray(data)) {
-          console.error('API response is not an array:', data);
-          return;
-        }
-
-        // Tạo nhiều thông báo từ details
-        const formattedNotifications = data.flatMap((item) =>
-          item.details?.map((detail, index) => ({
-            id: `${item.id}-${index}`,
-            sensorId: item.sensorId || 'unknown',
-            type: detail.mode?.toLowerCase() || 'info',
-            message: `${detail.type} ${detail.mode || ''}`.trim(),
-            time: item.timestamp ? formatTimestamp(item.timestamp) : new Date().toLocaleString('en-GB'),
-          })) || []
-        );
-
-        console.log('Setting notifications:', formattedNotifications);
-        setNotifications(formattedNotifications);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    };
 
-    fetchNotifications();
-  }, [accessToken]);
+      const responseData = await response.json();
+      console.log('API response data:', responseData);
 
-  // WebSocket để nhận thông báo mới
-  useEffect(() => {
-    console.log('Starting WebSocket with accessToken:', accessToken);
-    if (!accessToken) {
-      console.log('No accessToken provided, skipping WebSocket');
-      return;
+      // Lấy mảng thực sự ở trường data
+      const list = Array.isArray(responseData.data) ? responseData.data : [];
+
+      // Lấy tổng số notification server trả về
+      const totalFromServer = typeof responseData.total === 'number'
+        ? responseData.total
+        : 0;
+
+      // Chuyển format từng item giống trước
+      const formattedNotifications = list.flatMap((item) =>
+        item.details?.map((detail, index) => ({
+          id: `${item.id}-${index}`,
+          sensorId: item.sensorId || 'unknown',
+          type: detail.mode?.toLowerCase() || 'info',
+          message: `${detail.type} ${detail.mode || ''}`.trim(),
+          time: item.timestamp
+            ? formatTimestamp(item.timestamp)
+            : new Date().toLocaleString('en-GB'),
+        })) || []
+      );
+
+      setNotifications(formattedNotifications);
+      setTotalItems(totalFromServer);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotifications([]);
+      setTotalItems(0);
     }
+  };
 
-    const socket = new WebSocket(`wss://smarthomeserver-wdt0.onrender.com/ws/notification?token=${accessToken}`);
+  // Khi accessToken hoặc currentPage thay đổi, gọi lại fetch
+  useEffect(() => {
+    console.log('Fetch notifications for page', currentPage);
+    fetchNotifications(currentPage);
+  }, [accessToken, currentPage]);
 
-    socket.onopen = () => {
-      console.log('WebSocket connected');
-    };
+  // WebSocket vẫn giữ nguyên logic cũ
+  useEffect(() => {
+    if (!accessToken) return;
 
+    const socket = new WebSocket(
+      `wss://smarthomeserver-wdt0.onrender.com/ws/notification?token=${accessToken}`
+    );
+
+    socket.onopen = () => console.log('WebSocket connected');
     socket.onmessage = (event) => {
       console.log('WebSocket message:', event.data);
       let parsedData;
       try {
         parsedData = JSON.parse(event.data);
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        console.error('Error parsing WebSocket data:', error);
         return;
       }
 
-      if (parsedData.error) {
-        console.error('WebSocket error:', parsedData.error);
-        return;
-      }
-
-      // Kiểm tra loại tin nhắn
+      // Xử lý message giống cũ, thêm vào đầu array notifications
       if (parsedData.request) {
-        // Thông báo hệ thống (ví dụ: yêu cầu theo dõi cảm biến)
         setNotifications((prev) => [
           {
             id: `system-${Date.now()}`,
@@ -113,7 +110,6 @@ const Notification = ({ accessToken }) => {
                 label: 'Accept',
                 onClick: () => {
                   console.log('Accept subscription for user:', parsedData.userID);
-                  // Gọi API để chấp nhận yêu cầu (nếu có)
                 },
                 type: 'primary',
               },
@@ -121,7 +117,6 @@ const Notification = ({ accessToken }) => {
                 label: 'Decline',
                 onClick: () => {
                   console.log('Decline subscription for user:', parsedData.userID);
-                  // Gọi API để từ chối yêu cầu (nếu có)
                 },
                 type: 'secondary',
               },
@@ -129,35 +124,29 @@ const Notification = ({ accessToken }) => {
           },
           ...prev,
         ]);
+        // Lưu ý: khi có WebSocket mới, totalItems không thay đổi (hoặc bạn có thể +1 nếu muốn).
       } else if (parsedData.details) {
-        // Thông báo cảnh báo (có details)
         const newNotifications = parsedData.details.map((detail, index) => ({
           id: `${parsedData.id || Date.now()}-${index}`,
           sensorId: parsedData.sensorId || 'unknown',
           type: detail.mode?.toLowerCase() || 'info',
           message: `${detail.type} ${detail.mode || ''}`.trim(),
-          time: parsedData.timestamp ? formatTimestamp(parsedData.timestamp) : new Date().toLocaleString('en-GB'),
+          time: parsedData.timestamp
+            ? formatTimestamp(parsedData.timestamp)
+            : new Date().toLocaleString('en-GB'),
         }));
 
         setNotifications((prev) => [...newNotifications, ...prev]);
       } else {
-        console.warn('Unknown WebSocket message format:', parsedData);
+        console.warn('Unknown WebSocket format:', parsedData);
       }
     };
 
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
+    socket.onerror = (error) => console.error('WebSocket error:', error);
     socket.onclose = () => {
-      console.log('WebSocket đã đóng kết nối');
+      console.log('WebSocket closed, reconnecting in 5s...');
       setTimeout(() => {
-        console.log('Reconnecting WebSocket...');
-        const newSocket = new WebSocket(`wss://smarthomeserver-1wdh.onrender.com/ws/notification?token=${accessToken}`);
-        newSocket.onopen = socket.onopen;
-        newSocket.onmessage = socket.onmessage;
-        newSocket.onerror = socket.onerror;
-        newSocket.onclose = socket.onclose;
+        fetchNotifications(currentPage); // Tạm thời gọi lại fetch để đồng bộ nếu cần
       }, 5000);
     };
 
@@ -166,22 +155,94 @@ const Notification = ({ accessToken }) => {
         socket.close();
       }
     };
-  }, [accessToken]);
+  }, [accessToken, currentPage]);
+
+  // Tính toán pagination dựa trên totalItems
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // Hàm điều hướng trang
+  const paginate = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  // Lấy trang đang hiển thị để highlight button
+  const getDisplayedPages = () => {
+    const maxPagesToShow = 4;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    return Array.from(
+      { length: endPage - startPage + 1 },
+      (_, i) => startPage + i
+    );
+  };
 
   return (
     <div className="flex flex-col font-poppins space-y-4 p-4">
+      {/* Hiển thị tổng số notification (nếu cần) */}
+      <div className="text-gray-300 mb-2">
+        Tổng: {totalItems} thông báo — Trang {currentPage} / {totalPages}
+      </div>
+
       {notifications.length === 0 ? (
         <p className="text-gray-500">No notifications available.</p>
       ) : (
-        notifications.map((notice) => (
-          <Notice
-            key={notice.id}
-            type={notice.type}
-            message={notice.message}
-            time={notice.time}
-            actions={notice.actions}
-          />
-        ))
+        <>
+          {notifications.map((notice) => (
+            <Notice
+              key={notice.id}
+              type={notice.type}
+              message={notice.message}
+              time={notice.time}
+              actions={notice.actions}
+            />
+          ))}
+
+          {/* Phân trang */}
+          <div className="flex justify-center space-x-2 mt-4">
+            <button
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded ${
+                currentPage === 1
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              Previous
+            </button>
+
+            {getDisplayedPages().map((pageNumber) => (
+              <button
+                key={pageNumber}
+                onClick={() => paginate(pageNumber)}
+                className={`px-4 py-2 rounded ${
+                  currentPage === pageNumber
+                    ? 'bg-blue-700 text-white'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button
+              onClick={() => paginate(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded ${
+                currentPage === totalPages
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

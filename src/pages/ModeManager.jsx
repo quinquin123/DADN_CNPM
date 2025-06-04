@@ -271,7 +271,6 @@ const ModeManager = () => {
                   className="text-gray-600 hover:text-blue-500"
                   disabled={isLoading}
                 >
-                  <Edit size={20} />
                 </button>
               </div>
             )
